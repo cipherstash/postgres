@@ -655,7 +655,7 @@ pqDropServerData(PGconn *conn)
  * call succeeded.
  */
 PGconn *
-PQconnectdbParams(const char *const *keywords,
+PQconnectdbParams_adaptee(const char *const *keywords,
 				  const char *const *values,
 				  int expand_dbname)
 {
@@ -710,7 +710,7 @@ PQpingParams(const char *const *keywords,
  * call succeeded.
  */
 PGconn *
-PQconnectdb(const char *conninfo)
+PQconnectdb_adaptee(const char *conninfo)
 {
 	PGconn	   *conn = PQconnectStart(conninfo);
 
@@ -838,7 +838,7 @@ PQconnectStartParams(const char *const *keywords,
  * See PQconnectPoll for more info.
  */
 PGconn *
-PQconnectStart(const char *conninfo)
+PQconnectStart_adaptee(const char *conninfo)
 {
 	PGconn	   *conn;
 
@@ -4258,7 +4258,7 @@ closePGconn(PGconn *conn)
  * the PGconn data structure so it shouldn't be re-used after this.
  */
 void
-PQfinish(PGconn *conn)
+PQfinish_adaptee(PGconn *conn)
 {
 	if (conn)
 	{

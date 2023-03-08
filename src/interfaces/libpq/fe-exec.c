@@ -1410,7 +1410,6 @@ pqRecycleCmdQueueEntry(PGconn *conn, PGcmdQueueEntry *entry)
 	conn->cmd_queue_recycle = entry;
 }
 
-
 /*
  * PQsendQuery
  *	 Submit a query, but don't wait for it to finish
@@ -1422,9 +1421,9 @@ pqRecycleCmdQueueEntry(PGconn *conn, PGcmdQueueEntry *entry)
  * except that it doesn't reset conn->errorMessage.
  */
 int
-PQsendQuery(PGconn *conn, const char *query)
+PQsendQuery_adaptee(PGconn *conn, const char *query)
 {
-	return PQsendQueryInternal(conn, query, true);
+  return PQsendQueryInternal(conn, query, true);
 }
 
 int
@@ -1500,7 +1499,7 @@ sendFailed:
  *		Like PQsendQuery, but use extended query protocol so we can pass parameters
  */
 int
-PQsendQueryParams(PGconn *conn,
+PQsendQueryParams_adaptee(PGconn *conn,
 				  const char *command,
 				  int nParams,
 				  const Oid *paramTypes,
@@ -1546,7 +1545,7 @@ PQsendQueryParams(PGconn *conn,
  *			0 if error (conn->errorMessage is set)
  */
 int
-PQsendPrepare(PGconn *conn,
+PQsendPrepare_adaptee(PGconn *conn,
 			  const char *stmtName, const char *query,
 			  int nParams, const Oid *paramTypes)
 {
@@ -1646,7 +1645,7 @@ sendFailed:
  *		using extended query protocol so we can pass parameters
  */
 int
-PQsendQueryPrepared(PGconn *conn,
+PQsendQueryPrepared_adaptee(PGconn *conn,
 					const char *stmtName,
 					int nParams,
 					const char *const *paramValues,
@@ -2048,7 +2047,7 @@ PQisBusy(PGconn *conn)
  *	  result with PQresultStatus(result) == PGRES_PIPELINE_SYNC.
  */
 PGresult *
-PQgetResult(PGconn *conn)
+PQgetResult_adaptee(PGconn *conn)
 {
 	PGresult   *res;
 
@@ -3746,6 +3745,7 @@ PQgetvalue(const PGresult *res, int tup_num, int field_num)
 {
 	if (!check_tuple_field_number(res, tup_num, field_num))
 		return NULL;
+
 	return res->tuples[tup_num][field_num].value;
 }
 
@@ -3757,8 +3757,9 @@ PQgetlength(const PGresult *res, int tup_num, int field_num)
 {
 	if (!check_tuple_field_number(res, tup_num, field_num))
 		return 0;
-	if (res->tuples[tup_num][field_num].len != NULL_LEN)
+	if (res->tuples[tup_num][field_num].len != NULL_LEN) {
 		return res->tuples[tup_num][field_num].len;
+  }
 	else
 		return 0;
 }
