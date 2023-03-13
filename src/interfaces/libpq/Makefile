@@ -31,6 +31,10 @@ ifeq ($(PORTNAME), darwin)
 override CFLAGS += -framework Security -framework CoreFoundation
 endif
 
+ifeq ($(PORTNAME), linux)
+override CFLAGS += -lssl -lcrypto
+endif
+
 # The MSVC build system scrapes OBJS from this file.  If you change any of
 # the conditional additions of files to OBJS, update Mkvcbuild.pm to match.
 
