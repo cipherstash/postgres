@@ -1,7 +1,7 @@
 /*
  * pq-ext-adapter.c
  *    Shim code to wrap client functions in libpq with "encryption aware variants"
- * 
+ *
  * The functions call functions in Rust without exposing any libpq internals.
  * For example, PGresult is not mirrored in the Rust code and instead an intermediate
  * type (MappablePgResult) is used. This keeps the adapter code simple and makes any modifications
@@ -190,7 +190,7 @@ PQsendQueryParams(
       paramLengths,
       paramFormats,
       resultFormat,
-      PQsendQueryParams_adaptee 
+      PQsendQueryParams_adaptee
     );
 
   } else {
@@ -231,12 +231,12 @@ PGresult *PQgetResult(PGconn *conn)
  * PQEXTmappablePGResult structs which contain only length and a pointer to the data
  * for each tuple field. This avoids the need for Rust to understand the entire
  * PGresult struct which is chonky and is different between some versions of Postgres.
- * 
+ *
  * Data pointers point only to memory that was allocated by libpq and must not be
  * free'd here or in Rust. Mapped values are copied into the data pointer.
  * This approach works because plaintexts will *always* be smaller than the
  * ciphertexts so we have enough memory already allocated.
- * 
+ *
  * Once mapped, the result values must have their lengths updated which requires
  * one more full iteration through the resulst.
 */
@@ -248,7 +248,8 @@ static PGresult *CSmapResult(PQEXTDriver *driver, PGresult *result)
   int num_rows = PQntuples(result);
   int num_cols = PQnfields(result);
 
-  PQEXTMappablePGResult *to_map = palloc(num_rows * num_cols * sizeof(PQEXTMappablePGResult));
+  PQEXTMappablePGResult *to_map = malloc(num_rows * num_cols * sizeof(PQEXTMappablePGResult));
+
   if (!to_map) {
     if (errno == ENOMEM) {
       fprintf(stderr, "FATAL: Unable to allocate memory while mapping results\n");
@@ -268,7 +269,6 @@ static PGresult *CSmapResult(PQEXTDriver *driver, PGresult *result)
           to_map[cell_count].data = (unsigned char *)result->tuples[row][col].value;
         }
         to_map[cell_count].len = PQgetlength(result, row, col);
-
         cell_count++;
       //}
     }
@@ -287,6 +287,6 @@ static PGresult *CSmapResult(PQEXTDriver *driver, PGresult *result)
     }
   }
 
-  pfree(to_map);
+  free(to_map);
   return result;
 }
