@@ -49,8 +49,7 @@ OBJS = \
 	libpq-events.o \
 	pqexpbuffer.o \
 	fe-auth.o \
-	pq-ext-adapter.o \
-	libpq_ext.a
+	pq-ext-adapter.o
 
 # File shared across all SSL implementations supported.
 ifneq ($(with_ssl),no)
@@ -88,7 +87,7 @@ endif
 # matter.)  Note that we filter out -lpgcommon and -lpgport from LIBS and
 # instead link with -lpgcommon_shlib and -lpgport_shlib, to get object files
 # that are built correctly for use in a shlib.
-SHLIB_LINK_INTERNAL = -lpgcommon_shlib -lpgport_shlib
+SHLIB_LINK_INTERNAL = -lpgcommon_shlib -lpgport_shlib -lpq_ext -L .
 ifneq ($(PORTNAME), win32)
 SHLIB_LINK += $(filter -lcrypt -ldes -lcom_err -lcrypto -lk5crypto -lkrb5 -lgssapi_krb5 -lgss -lgssapi -lssl -lsocket -lnsl -lresolv -lintl -lm, $(LIBS)) $(LDAP_LIBS_FE) $(PTHREAD_LIBS)
 else
