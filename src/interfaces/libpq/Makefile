@@ -49,8 +49,7 @@ OBJS = \
 	libpq-events.o \
 	pqexpbuffer.o \
 	fe-auth.o \
-	pq-ext-adapter.o \
-	libpq_ext.a
+	pq-ext-adapter.o
 
 # File shared across all SSL implementations supported.
 ifneq ($(with_ssl),no)
