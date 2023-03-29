@@ -589,7 +589,6 @@ struct pg_conn
 
 	/* Buffer for receiving various parts of messages */
 	PQExpBufferData workBuffer; /* expansible string */
-  
   // Dan here
   void *pgExtState;
 };
