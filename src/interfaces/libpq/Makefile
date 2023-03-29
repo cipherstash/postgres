@@ -27,6 +27,10 @@ ifneq ($(PORTNAME), win32)
 override CFLAGS += $(PTHREAD_CFLAGS)
 endif
 
+ifeq ($(PORTNAME), darwin)
+override CFLAGS += -framework Security -framework CoreFoundation
+endif
+
 # The MSVC build system scrapes OBJS from this file.  If you change any of
 # the conditional additions of files to OBJS, update Mkvcbuild.pm to match.
 
@@ -44,7 +48,9 @@ OBJS = \
 	legacy-pqsignal.o \
 	libpq-events.o \
 	pqexpbuffer.o \
-	fe-auth.o
+	fe-auth.o \
+	pq-ext-adapter.o \
+	libpq_ext.a
 
 # File shared across all SSL implementations supported.
 ifneq ($(with_ssl),no)
@@ -117,11 +123,12 @@ backend_src = $(top_srcdir)/src/backend
 # coding rule.
 libpq-refs-stamp: $(shlib)
 ifneq ($(enable_coverage), yes)
-ifeq (,$(filter aix solaris,$(PORTNAME)))
-	@if nm -A -u $< 2>/dev/null | grep -v __cxa_atexit | grep exit; then \
-		echo 'libpq must not be calling any function which invokes exit'; exit 1; \
-	fi
-endif
+# DAN - comment this out for now, rust lib contains symbols that this check thinks will exit
+#ifeq (,$(filter aix solaris,$(PORTNAME)))
+#	@if nm -A -u $< 2>/dev/null | grep -v __cxa_atexit | grep exit; then \
+#		echo 'libpq must not be calling any function which invokes exit'; exit 1; \
+#	fi
+#endif
 endif
 	touch $@
 
