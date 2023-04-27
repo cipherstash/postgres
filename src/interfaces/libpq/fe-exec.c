@@ -2232,6 +2232,26 @@ getCopyResult(PGconn *conn, ExecStatusType copytype)
 
 
 /*
+ * PQexecVoid
+ *	  send a query to the backend similar to PQexec and ignore the result
+ *
+ * Just a helper function to send query to backend without mapping and dump the result,
+ * useful for doing rollback from PQExt
+ */
+void
+PQexecVoid(PGconn *conn, const char *query)
+{
+	if (!PQexecStart(conn))
+		return;
+	if (!PQsendQuery_adaptee(conn, query))
+		return;
+	PGresult *res = PQexecFinish(conn);
+	if (res) {
+		PQclear(res);
+	}
+}
+
+/*
  * PQexec
  *	  send a query to the backend and package up the result in a PGresult
  *
