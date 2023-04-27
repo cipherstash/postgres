@@ -93,7 +93,7 @@ int PQsendQuery(PGconn *conn, const char *query)
   // TODO: Handle if driver is NULL
   PQEXTDriver *driver = (PQEXTDriver *)conn->pgExtState;
   // Note that PQEXTmapQuery will check for NULL state
-  return PQEXTmapQuery(query, conn, driver, &PQsendQuery_adaptee);
+  return PQEXTmapQuery(query, conn, driver, PQsendQuery_adaptee, PQgetResult_adaptee);
 }
 
 int PQsendQueryPrepared(PGconn *conn,
@@ -115,7 +115,9 @@ int PQsendQueryPrepared(PGconn *conn,
         paramLengths,
         paramFormats,
         resultFormat,
-        PQsendQueryPrepared_adaptee
+        PQsendQueryPrepared_adaptee,
+        PQsendQuery_adaptee,
+        PQgetResult_adaptee
     );
   } else {
     PQEXTmsgError("PQsendQueryPrepared: driver initialisation failed which may be due to misconfiguration. Learn more in the CipherStash docs: https://docs.cipherstash.com");
@@ -145,7 +147,9 @@ int PQsendPrepare(PGconn *conn,
         query,
         nParams,
         paramTypes,
-        PQsendPrepare_adaptee
+        PQsendPrepare_adaptee,
+        PQsendQuery_adaptee,
+        PQgetResult_adaptee
     );
   } else {
     PQEXTmsgError("PQsendPrepare: driver initialisation failed which may be due to misconfiguration. Learn more in the CipherStash docs: https://docs.cipherstash.com");
@@ -158,17 +162,9 @@ int PQsendPrepare(PGconn *conn,
         paramTypes
     );
   }
-
-
-
-  // TODO: Handle if driver is NULL
-  PQEXTDriver *driver = (PQEXTDriver *)conn->pgExtState;
-
-
 }
 
-int
-PQsendQueryParams(
+int PQsendQueryParams(
   PGconn *conn,
   const char *command,
   int nParams,
@@ -180,6 +176,7 @@ PQsendQueryParams(
 {
   if (conn && conn->pgExtState) {
     PQEXTDriver *driver = (PQEXTDriver *)conn->pgExtState;
+
     return PQEXTmapQueryParams(
       driver,
       conn,
@@ -190,9 +187,10 @@ PQsendQueryParams(
       paramLengths,
       paramFormats,
       resultFormat,
-      PQsendQueryParams_adaptee
+      PQsendQueryParams_adaptee,
+      PQsendQuery_adaptee,
+      PQgetResult_adaptee
     );
-
   } else {
     PQEXTmsgError("PQsendQueryParams: driver initialisation failed which may be due to misconfiguration. Learn more in the CipherStash docs: https://docs.cipherstash.com");
 
