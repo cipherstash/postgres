@@ -207,19 +207,27 @@ int PQsendQueryParams(
 
 PGresult *PQgetResult(PGconn *conn)
 {
-    // Get the query result
-    PGresult *res = PQgetResult_adaptee(conn);
+  // Get the query result
+  PGresult *res = PQgetResult_adaptee(conn);
+
+  if (conn && conn-> pgExtState) {
+    PQEXTDriver *driver = (PQEXTDriver *)conn->pgExtState;
+
     if (res == NULL) {
-        return NULL;
+       // If the query result was null it means all results have been returned.
+       // The cache is no longer needed so clear it!
+       if (!PQEXTclearValuesCache(driver)) {
+         PQEXTmsgError("PQgetResult: failed to clear results cache");
+       }
+
+       return NULL;
     }
 
-    if (conn && conn-> pgExtState) {
-      PQEXTDriver *driver = (PQEXTDriver *)conn->pgExtState;
-      return CSmapResult(driver, res);
-    } else {
-      fprintf(stderr, "Warning: Protect Driver not initialized!\n");
-      return res;
-    }
+    return CSmapResult(driver, res);
+  } else {
+    fprintf(stderr, "Warning: Protect Driver not initialized!\n");
+    return res;
+  }
 }
 
 /*
