@@ -263,10 +263,10 @@ static PGresult *CSmapResult(PQEXTDriver *driver, PGresult *result)
 
   int cell_count = 0;
   // TODO: Will this approach work in singlerow mode?
-  for (int col = 0; col < num_cols; col++) {
+  for (int row = 0; row < num_rows; row++) {
     // TODO: Could we Only try to decrypt bytea fields?
     //if (PQftype(result, col) == 17) { // BYTEAOID
-      for (int row = 0; row < num_rows; row++) {
+      for (int col = 0; col < num_cols; col++) {
         if (PQgetisnull(result, row, col)) {
           to_map[cell_count].data = NULL;
         } else {
@@ -278,11 +278,11 @@ static PGresult *CSmapResult(PQEXTDriver *driver, PGresult *result)
     }
   }
 
-  if (PQEXTmapResult(driver, to_map, cell_count)) {
+  if (PQEXTmapResult(driver, to_map, cell_count, num_rows, num_cols)) {
     cell_count = 0;
     // Set the revised value lengths
-    for (int col = 0; col < num_cols; col++) {
-        for (int row = 0; row < num_rows; row++) {
+    for (int row = 0; row < num_rows; row++) {
+      for (int col = 0; col < num_cols; col++) {
           if (!PQgetisnull(result, row, col)) {
             result->tuples[row][col].len = to_map[cell_count].len;
           }
