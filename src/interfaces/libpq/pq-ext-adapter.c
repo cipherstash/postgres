@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include "pq-ext.h"
+#include "pq-ext-v2.h"
 #include "postgres_fe.h"
 #include "libpq-int.h"
 
@@ -48,6 +49,7 @@ void PQexecVoid(PGconn *conn, const char *query);
 
 // Internal helper - TODO: collapse this into PQgetResult
 static PGresult *CSmapResult(PQEXTDriver *driver, PGresult *result);
+static PGresult *CSmapResultV2(PGconn *conn, PQEXTDriver *driver, PGresult *result);
 
 PGconn *PQconnectdbParams(const char *const *keywords, const char *const *values, int expand_dbname)
 {
@@ -223,7 +225,7 @@ PGresult *PQgetResult(PGconn *conn)
        return NULL;
     }
 
-    return CSmapResult(driver, res);
+    return CSmapResultV2(conn, driver, res);
   } else {
     fprintf(stderr, "Warning: Protect Driver not initialized!\n");
     return res;
@@ -293,4 +295,57 @@ static PGresult *CSmapResult(PQEXTDriver *driver, PGresult *result)
 
   free(to_map);
   return result;
+}
+
+
+// V2 FTW
+static PGresult *CSmapResultV2(PGconn *conn, PQEXTDriver *driver, PGresult *result)
+{
+  if (!result) return NULL;
+
+  // Map the result set to the external library
+  int num_rows = PQntuples(result);
+  int num_cols = PQnfields(result);
+
+  PQExtPgResult_t results_to_map = pqext_pgresult_new(num_cols);
+
+  for (int row = 0; row < num_rows; row++) {
+    for (int col = 0; col < num_cols; col++) {
+      if (PQgetisnull(result, row, col)) {
+        PQExtPGValue_t item = pqext_pgvalue_new_null();
+        pqext_pgresult_push(&results_to_map, item);
+      } else {
+        uint8_t *val = (uint8_t *)PQgetvalue(result, row, col);
+        PQExtPGValue_t item = pqext_pgvalue_new(val);
+        pqext_pgresult_push(&results_to_map, item);
+      }
+    }
+  }
+
+  PQExtPgResult_t results_mapped;
+  results_mapped = pqext_map_result_v2(driver, results_to_map);
+
+  int new_col_num = 3;
+  if (new_col_num) {
+    PGresult   *new_result;
+    new_result = PQmakeEmptyPGresult(conn, result->resultStatus);
+    PQsetResultAttrs(new_result, new_col_num, result->attDescs);
+
+    // Assign value from each cell
+    for (int row = 0; row < num_rows; row++) {
+      for (int col = 0; col < new_col_num; col++) {
+        int idx = new_col_num * row + col;
+        if (!pqext_pgvalue_isnull(&results_mapped.values.ptr[idx])) {
+          PQsetvalue(new_result, row, col, (char *)results_mapped.values.ptr[idx].data.ptr, results_mapped.values.ptr[idx].data.len);
+        }
+      }
+    }
+
+    // free(to_map);
+    // free(result);
+    // printf("we are here -\n");
+    return new_result;
+  } else {
+    return result;
+  }
 }
