@@ -324,17 +324,17 @@ static PGresult *CSmapResultV2(PGconn *conn, PQEXTDriver *driver, PGresult *resu
 
   PQExtPgResult_t results_mapped;
   results_mapped = pqext_map_result_v2(driver, results_to_map);
+  int new_num_cols = results_mapped.col_num;
 
-  int new_col_num = 3;
-  if (new_col_num) {
+  if (new_num_cols) {
     PGresult   *new_result;
     new_result = PQmakeEmptyPGresult(conn, result->resultStatus);
-    PQsetResultAttrs(new_result, new_col_num, result->attDescs);
+    PQsetResultAttrs(new_result, new_num_cols, result->attDescs);
 
     // Assign value from each cell
     for (int row = 0; row < num_rows; row++) {
-      for (int col = 0; col < new_col_num; col++) {
-        int idx = new_col_num * row + col;
+      for (int col = 0; col < new_num_cols; col++) {
+        int idx = new_num_cols * row + col;
         if (!pqext_pgvalue_isnull(&results_mapped.values.ptr[idx])) {
           PQsetvalue(new_result, row, col, (char *)results_mapped.values.ptr[idx].data.ptr, results_mapped.values.ptr[idx].data.len);
         }
