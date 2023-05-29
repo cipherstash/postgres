@@ -302,49 +302,73 @@ static PGresult *CSmapResult(PQEXTDriver *driver, PGresult *result)
 static PGresult *CSmapResultV2(PGconn *conn, PQEXTDriver *driver, PGresult *result)
 {
   if (!result) return NULL;
+  
+  int numRows = PQntuples(result);
+  int numCols = PQnfields(result);
 
-  // Map the result set to the external library
-  int num_rows = PQntuples(result);
-  int num_cols = PQnfields(result);
+  // Cast the result set to the external library
+  PQExtPgResult_t resultToMap = pqext_pgresult_new();
+  for (int col = 0; col < numCols; col++) {
+    pqext_pgresult_add_column(&resultToMap, PQfname(result, col));    
+  }
 
-  PQExtPgResult_t results_to_map = pqext_pgresult_new(num_cols);
-
-  for (int row = 0; row < num_rows; row++) {
-    for (int col = 0; col < num_cols; col++) {
+  for (int row = 0; row < numRows; row++) {
+    for (int col = 0; col < numCols; col++) {
       if (PQgetisnull(result, row, col)) {
         PQExtPGValue_t item = pqext_pgvalue_new_null();
-        pqext_pgresult_push(&results_to_map, item);
+        pqext_pgresult_push(&resultToMap, item);
       } else {
         uint8_t *val = (uint8_t *)PQgetvalue(result, row, col);
         PQExtPGValue_t item = pqext_pgvalue_new(val);
-        pqext_pgresult_push(&results_to_map, item);
+        pqext_pgresult_push(&resultToMap, item);
       }
     }
   }
 
-  PQExtPgResult_t results_mapped;
-  results_mapped = pqext_map_result_v2(driver, results_to_map);
-  int new_num_cols = results_mapped.col_num;
+  // Store the newly mapped result
+  PQExtPgResult_t resultMapped;
+  resultMapped = pqext_map_result_v2(driver, resultToMap);
+  int newNumCols = (int)resultMapped.column_names.len;
 
-  if (new_num_cols) {
-    PGresult   *new_result;
-    new_result = PQmakeEmptyPGresult(conn, result->resultStatus);
-    PQsetResultAttrs(new_result, new_num_cols, result->attDescs);
+  if (newNumCols) {
+    // Recreate the attribute descriptions based on the returned column names
+    PGresAttDesc * newAttDescs = malloc(newNumCols * sizeof(PGresAttDesc));
+    for (int col = 0; col < newNumCols; col++) {
+      char *name = malloc(resultMapped.column_names.ptr[col].len);
+      strcpy(name, (char *)resultMapped.column_names.ptr[col].ptr);
 
-    // Assign value from each cell
-    for (int row = 0; row < num_rows; row++) {
-      for (int col = 0; col < new_num_cols; col++) {
-        int idx = new_num_cols * row + col;
-        if (!pqext_pgvalue_isnull(&results_mapped.values.ptr[idx])) {
-          PQsetvalue(new_result, row, col, (char *)results_mapped.values.ptr[idx].data.ptr, results_mapped.values.ptr[idx].data.len);
+      PGresAttDesc attDesc = {
+        .name = name,   /* column name */
+        .tableid = 0,   /* source table, if known */
+        .columnid = 0,  /* source column, if known */
+        .format = 0,    /* format code for value (text/binary) */
+        .typid = 0,     /* type id */
+        .typlen = 0,    /* type size */
+        .atttypmod = 0, /* type-specific modifier info */
+      };
+
+      newAttDescs[col] = attDesc;
+    }
+
+    // Create a new result object
+    PGresult   *newResult;
+    newResult = PQmakeEmptyPGresult(conn, result->resultStatus);
+    PQsetResultAttrs(newResult, newNumCols, newAttDescs);
+
+    // Assign value from each cell into the new result
+    for (int row = 0; row < numRows; row++) {
+      for (int col = 0; col < newNumCols; col++) {
+        int idx = newNumCols * row + col;
+        if (!pqext_pgvalue_isnull(&resultMapped.values.ptr[idx])) {
+          PQsetvalue(newResult, row, col, (char *)resultMapped.values.ptr[idx].data.ptr, resultMapped.values.ptr[idx].data.len);
         }
       }
     }
 
-    // free(to_map);
-    // free(result);
-    // printf("we are here -\n");
-    return new_result;
+    // free objects that we no longer use
+    free(result);
+    pqext_pgresult_drop(resultMapped);
+    return newResult;
   } else {
     return result;
   }
