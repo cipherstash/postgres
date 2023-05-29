@@ -334,8 +334,8 @@ static PGresult *CSmapResultV2(PGconn *conn, PQEXTDriver *driver, PGresult *resu
     // Recreate the attribute descriptions based on the returned column names
     PGresAttDesc * newAttDescs = malloc(newNumCols * sizeof(PGresAttDesc));
     for (int col = 0; col < newNumCols; col++) {
-      char *name = malloc(resultMapped.column_names.ptr[col].len);
-      strcpy(name, (char *)resultMapped.column_names.ptr[col].ptr);
+      char *name = malloc(strlen(resultMapped.column_names.ptr[col]));
+      strcpy(name, resultMapped.column_names.ptr[col]);
 
       PGresAttDesc attDesc = {
         .name = name,   /* column name */
