@@ -332,8 +332,10 @@ static PGresult *CSmapResultV2(PGconn *conn, PQEXTDriver *driver, PGresult *resu
 
   if (newNumCols) {
     // Recreate the attribute descriptions based on the returned column names
+    // TODO: Look into pqResultAlloc
     PGresAttDesc * newAttDescs = malloc(newNumCols * sizeof(PGresAttDesc));
     for (int col = 0; col < newNumCols; col++) {
+      // look for leaks here, do we need this copy?
       char *name = malloc(strlen(resultMapped.column_names.ptr[col]));
       strcpy(name, resultMapped.column_names.ptr[col]);
 
@@ -366,10 +368,11 @@ static PGresult *CSmapResultV2(PGconn *conn, PQEXTDriver *driver, PGresult *resu
     }
 
     // free objects that we no longer use
-    free(result);
+    PQclear(result);
     pqext_pgresult_drop(resultMapped);
     return newResult;
   } else {
+    pqext_pgresult_drop(resultMapped);
     return result;
   }
 }
