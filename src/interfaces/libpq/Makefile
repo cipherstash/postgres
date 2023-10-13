@@ -28,7 +28,7 @@ override CFLAGS += $(PTHREAD_CFLAGS)
 endif
 
 ifeq ($(PORTNAME), darwin)
-override CFLAGS += -framework Security -framework CoreFoundation
+override CFLAGS += -framework Security -framework CoreFoundation -framework Foundation -framework SystemConfiguration
 endif
 
 # The MSVC build system scrapes OBJS from this file.  If you change any of
